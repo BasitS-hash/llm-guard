@@ -1,0 +1,17 @@
+# gitleaks configuration for llm-guard
+# Keeps ALL default detectors active, but allowlists the synthetic, fake API keys
+# that live in the test suite. llm-guard's output scanner exists to DETECT leaked
+# secrets, so its tests necessarily contain realistic-looking (but fake) keys such
+# as "sk-abcdEFGH...". These are fixtures, not real credentials.
+title = "llm-guard gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic secrets used as test fixtures for llm-guard's own detectors"
+paths = [
+  '''tests/test_output_scanner\.py''',
+  '''tests/test_guard\.py''',
+  '''data/redteam_payloads\.json''',
+]
