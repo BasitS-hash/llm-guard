@@ -58,7 +58,7 @@ Run `llm-guard owasp` to print this table from the tool itself.
 
 ## Features
 
-- 🛡️ **Input scanner** — layered prompt-injection / jailbreak detection (11 signature rules + 3 heuristics) returning a risk score, the matched rule, and the OWASP category for every hit.
+- 🛡️ **Input scanner** — layered prompt-injection / jailbreak detection (12 signature rules + 3 heuristics) returning a risk score, the matched rule, and the OWASP category for every hit.
 - 🔍 **Output scanner** — 12 rules for PII / secret / private-key / system-prompt leakage and refusal-bypass markers, with automatic secret redaction.
 - 🧱 **`Guard` middleware** — `guard.check_input(text)` / `guard.check_output(text)` → a verdict object (`allow` / `flag` / `block` + reasons + per-detection breakdown).
 - 🤖 **`llm-guard redteam` CLI** — fires a curated injection/jailbreak corpus at a pluggable target and scores **resistance**, broken down by OWASP category. Output as a rich table (default), `--json`, or `--sarif`.
@@ -125,16 +125,23 @@ Sample `redteam` output:
 
 ```
 AI Red-Team Report — target: mock
-Overall resistance: 100% (20/20 payloads resisted)
+Overall resistance: 75% (15/20 payloads resisted)
 
-         By OWASP LLM category
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┓
-┃ Category                        ┃ Resisted ┃ Resistance ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ LLM01 Prompt Injection          │    16/16 │       100% │
-│ LLM07 System Prompt Leakage     │      4/4 │       100% │
-└─────────────────────────────────┴──────────┴────────────┘
+                 By OWASP LLM category
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ Category                    ┃ Resisted ┃ Resistance ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━┩
+│ LLM01 Prompt Injection      │    12/16 │        75% │
+│ LLM07 System Prompt Leakage │      3/4 │        75% │
+└─────────────────────────────┴──────────┴────────────┘
 ```
+
+Against the guarded mock, high-confidence attacks are **blocked** at the input
+boundary; a handful of deliberately borderline payloads (e.g. bare
+delimiter escapes, refusal-suppression, fiction framing) are **flagged** rather
+than blocked — a precision-first choice — so the mock forwards them and they
+count as not-resisted. Run `llm-guard redteam --vulnerable` to see the unguarded
+contrast.
 
 ### 3. FastAPI middleware
 

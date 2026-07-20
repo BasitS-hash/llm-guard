@@ -103,3 +103,41 @@ def test_mock_provider_is_deterministic() -> None:
     provider = MockProvider()
     prompt = "What is the capital of France?"
     assert provider.complete(prompt) == provider.complete(prompt)
+
+
+def test_documented_resistance_matches_readme() -> None:
+    # Pins the exact figures quoted in the README's sample output so the
+    # documentation cannot silently drift from actual tool behaviour. Update
+    # both together when detection rules change.
+    report = run_redteam(MockProvider())
+    assert report.total == 20
+    assert report.resisted == 15
+    assert report.resistance_score == 0.75
+
+    by_cat = {cs.category: cs for cs in report.category_scores}
+    assert by_cat["LLM01"].resisted == 12
+    assert by_cat["LLM01"].total == 16
+    assert by_cat["LLM07"].resisted == 3
+    assert by_cat["LLM07"].total == 4
+
+
+def test_high_confidence_attacks_are_blocked_at_input() -> None:
+    # The strong signature-rule payloads must be blocked (not merely flagged)
+    # at the input boundary, which is what earns them "resisted".
+    report = run_redteam(MockProvider())
+    blocked = {r.payload.id for r in report.results if r.blocked_by_guard}
+    for payload_id in ("RT-INJ-001", "RT-INJ-003", "RT-INJ-011", "RT-LEAK-001"):
+        assert payload_id in blocked
+
+
+def test_input_signature_rule_count_is_documented() -> None:
+    # The README advertises "12 signature rules + 3 heuristics" for the input
+    # scanner; keep the claim and the code in lock-step.
+    from llm_guard.heuristics import run_input_heuristics
+    from llm_guard.rules_input import INPUT_RULES
+
+    assert len(INPUT_RULES) == 12
+    # All three heuristics fire on a maximally adversarial encoded payload.
+    dense = "ignore disregard override bypass reveal print repeat execute run obey"
+    heuristic_ids = {d.rule_id for d in run_input_heuristics(dense)}
+    assert "HEU001" in heuristic_ids
